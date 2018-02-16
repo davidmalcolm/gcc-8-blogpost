@@ -12,57 +12,7 @@ Earlier work in this area:
 
 (look at gcc 7 changes)
 
-<h2>Hints for missing #includes</h2>
-
-FIXME: maybe set this up as a quick quiz (and thus a trick question)
-
-Fragments of code found on websites tend to be incomplete, and this can be frustrating when copying and pasting examples.
-
-Consider this C source:
-
-INCLUDE_SOURCE incomplete.c
-
-If you simply copy this into a new file and try to compile it as-is, it fails.
-
-For gcc 8 I've added hints telling you which header files are missing (for the most common cases):
-
-INVOKE_GCC incomplete.c
-
-These fix-it hints can be made machine-readable (for use by an IDE) via <code>-fdiagnostics-parseable-fixits</code>, or you can use <code>-fdiagnostics-generate-patch</code> to have gcc emit:
-
-<pre>
---- incomplete.c
-+++ incomplete.c
-@@ -1,3 +1,6 @@
-+#include <stdio.h>
-+#include <limits.h>
-+#include <stddef.h>
- const char *test (void)
- {
-     FILE *f;
-</pre>
-
-Similarly, for C++, gcc now emits hints for missing "std" includes:
-
-INCLUDE_SOURCE incomplete.cc
-
-INVOKE_GCC incomplete.cc
-
-<h2>How do I get at some "private" field?</h2>
-
-I often find myself trying to get at a field of a C++ object, knowing the fieldname, but finding it's private, and then trying to remember the name of the accessor - was it "get_foo", "getFoo", "read_foo", or just "foo"?
-
-So for GCC 8 I've added hints to the "field is private" error, showing how to use an accessor to get at the field in question, if one exists:
-
-For example, given:
-
-INCLUDE_SOURCE accessor.cc
-
-the compiler now gives this hint when complaining about the direct access:
-
-INVOKE_GCC accessor.cc
-
-<h2>Better handling of silly mistakes</h2>
+<h2>Helping you fix silly mistakes</h2>
 
 Quick - find the mistake in the following:
 
@@ -111,6 +61,42 @@ With gcc 8 it puts the error in the right place, and now prints:
 INVOKE_GCC q.c
 
 which I find much easier to figure out.
+
+<h2>A trick question?</h2>
+
+What's wrong with the following code?
+
+INCLUDE_SOURCE incomplete.c
+
+This is a trick question - the code is fine, but, as is common with fragments of code seen on random websites, it's missing <code>#include</code> directives.  If you simply copy this into a new file and try to compile it as-is, it fails.
+
+This can be frustrating when copying and pasting examples - I often find myself taking the extra few seconds to double-check which header a particular thing is declared in - so for gcc 8 I've added hints telling you which header files are missing (for the most common cases):
+
+INVOKE_GCC incomplete.c
+
+These fix-it hints can be made machine-readable (for use by an IDE) via <code>-fdiagnostics-parseable-fixits</code>, or you can use <code>-fdiagnostics-generate-patch</code> to have gcc emit:
+
+INCLUDE_SOURCE generated.patch
+
+Similarly, for C++, gcc now emits hints for missing "std" includes:
+
+INCLUDE_SOURCE incomplete.cc
+
+INVOKE_GCC incomplete.cc
+
+<h2>How do I get at some "private" field?</h2>
+
+I often find myself trying to get at a field of a C++ object, knowing the fieldname, but finding it's private, and then trying to remember the name of the accessor - was it "get_foo", "getFoo", "read_foo", or just "foo"?
+
+So for GCC 8 I've added hints to the "field is private" error, showing how to use an accessor to get at the field in question, if one exists:
+
+For example, given:
+
+INCLUDE_SOURCE accessor.cc
+
+the compiler now gives this hint when complaining about the direct access:
+
+INVOKE_GCC accessor.cc
 
 <h2>Template type differences</h2>
 
