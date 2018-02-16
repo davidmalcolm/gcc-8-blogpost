@@ -6,11 +6,11 @@ from pygments import highlight
 from pygments.lexers import guess_lexer_for_filename
 from pygments.formatters import HtmlFormatter
 
-def invoke_gcc(cmd):
-    print(subprocess.check_output(['bash', './gcc-to-html.sh', cmd]))
-
-def invoke_old_gcc(cmd):
-    print(subprocess.check_output(['bash', './old-gcc-to-html.sh', cmd]))
+def invoke_gcc(cmd, helper_script):
+    out = subprocess.check_output(['bash', helper_script, cmd],
+                                  stderr=subprocess.PIPE)
+    assert 'class=' not in out
+    print(out)
 
 def include_source(path):
     print('<pre>')
@@ -25,11 +25,11 @@ def handle_file(path):
         for line in f:
             m = re.match('INVOKE_GCC (.*)', line)
             if m:
-                invoke_gcc(m.group(1))
+                invoke_gcc(m.group(1), './gcc-to-html.sh')
                 continue
             m = re.match('INVOKE_OLD_GCC (.*)', line)
             if m:
-                invoke_old_gcc(m.group(1))
+                invoke_gcc(m.group(1), './old-gcc-to-html.sh')
                 continue
             m = re.match('INCLUDE (.*)', line)
             if m:
