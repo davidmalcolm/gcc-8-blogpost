@@ -1,0 +1,145 @@
+I work at Red Hat on <a href="https://gcc.gnu.org/">GCC, the GNU Compiler Collection</a>.
+
+<img class="aligncenter" src="http://rhdevelopers.files.wordpress.com/2014/08/gnu-logo.png" alt="GNU logo" />
+
+My main focus for the last year has been on making GCC easier to use, so I thought I'd write about some of the improvements I've made that are in the next major release of GCC, <a href="https://gcc.gnu.org/gcc-8/changes.html">GCC 8</a>.
+
+<!--more-->
+
+Earlier work in this area:
+* underlined ranges vs points (I added this in GCC 6)
+* fix-it hints (GCC 6?)
+
+(look at gcc 7 changes)
+
+<h2>Hints for missing #includes</h2>
+
+FIXME: maybe set this up as a quick quiz (and thus a trick question)
+
+Fragments of code found on websites tend to be incomplete, and this can be frustrating when copying and pasting examples.
+
+Consider this C source:
+
+INCLUDE_SOURCE incomplete.c
+
+If you simply copy this into a new file and try to compile it as-is, it fails.
+
+For gcc 8 I've added hints telling you which header files are missing (for the most common cases):
+
+INVOKE_GCC incomplete.c
+
+These fix-it hints can be made machine-readable (for use by an IDE) via <code>-fdiagnostics-parseable-fixits</code>, or you can use <code>-fdiagnostics-generate-patch</code> to have gcc emit:
+
+<pre>
+--- incomplete.c
++++ incomplete.c
+@@ -1,3 +1,6 @@
++#include <stdio.h>
++#include <limits.h>
++#include <stddef.h>
+ const char *test (void)
+ {
+     FILE *f;
+</pre>
+
+Similarly, for C++, gcc now emits hints for missing "std" includes:
+
+INCLUDE_SOURCE incomplete.cc
+
+INVOKE_GCC incomplete.cc
+
+<h2>How do I get at some "private" field?</h2>
+
+I often find myself trying to get at a field of a C++ object, knowing the fieldname, but finding it's private, and then trying to remember the name of the accessor - was it "get_foo", "getFoo", "read_foo", or just "foo"?
+
+So for GCC 8 I've added hints to the "field is private" error, showing how to use an accessor to get at the field in question, if one exists:
+
+For example, given:
+
+INCLUDE_SOURCE accessor.cc
+
+the compiler now gives this hint when complaining about the direct access:
+
+INVOKE_GCC accessor.cc
+
+<h2>Better handling of silly mistakes</h2>
+
+Quick - find the mistake in the following:
+
+INCLUDE_SOURCE t.c
+
+In earlier releases of gcc, we printed the rather unhelpful:
+
+INVOKE_OLD_GCC t.c
+
+I've fixed things in gcc 8 so that the location of the missing semicolon is properly highlighted (with a fix-it hint):
+
+INVOKE_GCC t.c
+
+Similarly, find the mistake in:
+
+INCLUDE_SOURCE unclosed.c
+
+Older versions of gcc printed:
+
+INVOKE_OLD_GCC unclosed.c
+
+FIXME: more complex nesting in the example
+
+It's complaining about a missing close-parenthesis, but which open-parenthesis does it correspond to?
+
+gcc 8 now highlights the relevant opening parenthesis:
+
+INVOKE_GCC unclosed.c
+
+If they're on the same line, it highlights it much more compactly:
+
+INVOKE_GCC unclosed-2.c
+
+I've also fixed how we handle:
+
+INCLUDE_SOURCE q.c
+
+for which earlier gcc releases used to print this inscrutable diagnostic:
+
+INVOKE_OLD_GCC q.c
+
+which was particularly bad if the two lines spanned two different header files.
+
+With gcc 8 it puts the error in the right place, and now prints:
+
+INVOKE_GCC q.c
+
+which I find much easier to figure out.
+
+<h2>Template type differences</h2>
+
+FIXME:
+
+* C++ template type diff printing (commit 4d1eda3ac6f22a81b1df2015f95060777908b42c)
+
+
+<h2>Other stuff</h2>
+
+The C++ frontend can now give you a hint if you use a macro before it was defined
+(e.g. if you mess up the order of your #includes):
+
+INVOKE_GCC ordering.cc
+
+I added fix-it hints to the C++ frontend's -Wold-style-cast diagnostic, telling you whether you can use a static_cast, const_cast, reinterpret_cast etc:
+
+INVOKE_GCC -c old-style-cast-fixits.cc -Wold-style-cast
+
+Plus a bunch of other stuff.
+
+<h2>Trying it out</h2>
+
+FIXME
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+C and C++:
+
+* C/C++: underline parameters in mismatching function calls (commits b6fde48ec375b5e945b02bcec0ce58fc45980fba and 5d78d423a5f7a1d135c7bb678e82007678d1313c resp.)
+
+* see also "testsuite: add param-type-mismatch.c/C testcases as a baseline" (commit 2ac219a2ce6f7b3ecc984e10c5775ffbf4fce8e0)
