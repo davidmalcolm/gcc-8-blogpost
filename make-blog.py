@@ -2,6 +2,10 @@ import re
 import subprocess
 import sys
 
+from pygments import highlight
+from pygments.lexers import guess_lexer_for_filename
+from pygments.formatters import HtmlFormatter
+
 def invoke_gcc(cmd):
     print(subprocess.check_output(['bash', './gcc-to-html.sh', cmd]))
 
@@ -9,11 +13,11 @@ def invoke_old_gcc(cmd):
     print(subprocess.check_output(['bash', './old-gcc-to-html.sh', cmd]))
 
 def include_source(path):
-    # TODO: pygments
     print('<pre>')
     with open(path) as f:
-        for line in f:
-            sys.stdout.write(line)
+        code = f.read()
+    lexer = guess_lexer_for_filename(path, code)
+    sys.stdout.write(highlight(code, lexer, HtmlFormatter(noclasses=True)))
     print('</pre>')
 
 def handle_file(path):
