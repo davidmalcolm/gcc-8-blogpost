@@ -104,6 +104,14 @@ FIXME:
 
 * C++ template type diff printing (commit 4d1eda3ac6f22a81b1df2015f95060777908b42c)
 
+INVOKE_OLD_GCC templates.cc
+
+INVOKE_GCC templates.cc
+
+INVOKE_GCC templates.cc -fdiagnostics-show-template-tree
+
+INVOKE_GCC templates.cc -fdiagnostics-show-template-tree -fno-elide-type
+
 
 <h2>Other stuff</h2>
 
