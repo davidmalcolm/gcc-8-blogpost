@@ -15,6 +15,9 @@ class Writer:
         self.css = subprocess.check_output(cmd,
                                            stderr=subprocess.PIPE)
 
+    def log(self, msg):
+        sys.stderr.write('%s\n' % msg)
+
     def apply_css(self, text):
         """Bake CSS rules into text"""
         p = premailer.Premailer(html=text, css_text=self.css,
@@ -31,6 +34,7 @@ class Writer:
         sys.stdout.write(text.encode('utf-8'))
 
     def invoke_gcc(self, cmd, helper_script):
+        self.log('invoke_gcc: %s' % (cmd, ))
         out = subprocess.check_output(['bash', helper_script, cmd],
                                       stderr=subprocess.PIPE)
         out = out.decode('utf-8')
@@ -39,6 +43,7 @@ class Writer:
         self.write(out + '\n')
 
     def include_source(self, path):
+        self.log('invoke_source: %s' % path)
         self.write('<pre>\n')
         with open(path) as f:
             code = f.read()
