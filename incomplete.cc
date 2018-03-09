@@ -1,1 +1,1 @@
-std::string s ("hello world");
+std::string s("hello world");

@@ -11,7 +11,7 @@ import premailer # pip install premailer
 class Writer:
     def __init__(self):
         cmd = ['/home/david/coding-3/gcc-git-bugfixing/src/ansi2html.sh',
-               '--bg=dark', '--palette=solarized', '--css-only']
+               '--bg=dark', '--palette=xterm', '--css-only']
         self.css = subprocess.check_output(cmd,
                                            stderr=subprocess.PIPE)
 

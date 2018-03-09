@@ -1,14 +1,15 @@
 double MIN = 68.0;
 double MAX = 72.0;
 
-extern void write_to_log ();
+int logging_enabled;
 
-void test (double temperature)
+extern void write_to_log(double);
+extern int check_range(void);
+
+void log_when_out_of_range(double temperature)
 {
-  if (temperature < MIN
-      || temperature > MAX
-    {
-      write_to_log ();
-    }
+  if (logging_enabled && check_range ()
+      && (temperature < MIN || temperature > MAX) {
+    write_to_log (temperature);
+  }
 }
- 

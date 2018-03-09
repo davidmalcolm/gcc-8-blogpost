@@ -1,4 +1,4 @@
-const char *test (void)
+const char *test(void)
 {
     FILE *f;
     int limit = INT_MAX;

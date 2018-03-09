@@ -1,18 +1,14 @@
 I work at Red Hat on <a href="https://gcc.gnu.org/">GCC, the GNU Compiler Collection</a>.
 
-<img class="aligncenter" src="http://rhdevelopers.files.wordpress.com/2014/08/gnu-logo.png" alt="GNU logo" />
+<img class="aligncenter" src="https://developers.redhat.com/blog/wp-content/uploads/2014/09/gnu-logo.png" alt="GNU logo" />
 
-My main focus for the last year has been on making GCC easier to use, so I thought I'd write about some of the improvements I've made that are in the next major release of GCC, <a href="https://gcc.gnu.org/gcc-8/changes.html">GCC 8</a>.
+My main focus for the last year has been on making GCC easier to use, so I thought I'd write about some of the C and C++ improvements I've made that are in the next major release of GCC, <a href="https://gcc.gnu.org/gcc-8/changes.html">GCC 8</a>.
 
 <!--more-->
 
-Earlier work in this area:
-* underlined ranges vs points (I added this in GCC 6)
-* fix-it hints (GCC 6?)
-
-(look at gcc 7 changes)
-
 <h2>Helping you fix silly mistakes</h2>
+
+<h3>Quick quiz #1</h3>
 
 Quick - find the mistake in the following:
 
@@ -22,11 +18,15 @@ In earlier releases of gcc, we printed the rather unhelpful:
 
 INVOKE_OLD_GCC t.c
 
-I've fixed things in gcc 8 so that the location of the missing semicolon is properly highlighted (with a fix-it hint):
+For gcc 8, I've fixed things so that the location of the missing semicolon is properly highlighted:
 
 INVOKE_GCC t.c
 
-Similarly, find the mistake in:
+In particular, the error message is now showing the correct line.  It also now suggests inserting the missing semicolon via a "fix-it hint", so that an IDE which supports them can offer to fix the issue for you (for example, <a href="https://bugs.eclipse.org/bugs/show_bug.cgi?id=497670">Eclipse's CDT</a>).
+
+<h3>Quick quiz #2</h3>
+
+Find the syntax error in:
 
 INCLUDE_SOURCE unclosed.c
 
@@ -34,13 +34,13 @@ Older versions of gcc printed:
 
 INVOKE_OLD_GCC unclosed.c
 
-FIXME: more complex nesting in the example
-
 It's complaining about a missing close-parenthesis, but which open-parenthesis does it correspond to?
 
 gcc 8 now highlights the relevant opening parenthesis:
 
 INVOKE_GCC unclosed.c
+
+and provides a fix-it hint so that IDEs can offer to automate the fix.  (Sadly, I wasn't able to fix that stray extra <code>"expected expression before '}' token"</code> error for gcc 8).
 
 If they're on the same line, it highlights it much more compactly:
 
@@ -62,7 +62,7 @@ INVOKE_GCC q.c
 
 which I find much easier to figure out.
 
-<h2>A trick question?</h2>
+<h3>A trick question?</h3>
 
 What's wrong with the following code?
 
@@ -70,11 +70,11 @@ INCLUDE_SOURCE incomplete.c
 
 This is a trick question - the code is fine, but, as is common with fragments of code seen on random websites, it's missing <code>#include</code> directives.  If you simply copy this into a new file and try to compile it as-is, it fails.
 
-This can be frustrating when copying and pasting examples - I often find myself taking the extra few seconds to double-check which header a particular thing is declared in - so for gcc 8 I've added hints telling you which header files are missing (for the most common cases):
+This can be frustrating when copying and pasting examples - off the top of your head, which header files are needed by the above? - so for gcc 8 I've added hints telling you which header files are missing (for the most common cases):
 
 INVOKE_GCC incomplete.c
 
-These fix-it hints can be made machine-readable (for use by an IDE) via <code>-fdiagnostics-parseable-fixits</code>, or you can use <code>-fdiagnostics-generate-patch</code> to have gcc emit:
+As before these fix-it hints can be made machine-readable (for use by an IDE) via <code>-fdiagnostics-parseable-fixits</code>, or you can use <code>-fdiagnostics-generate-patch</code> to have gcc emit:
 
 INCLUDE_SOURCE generated.patch
 
@@ -84,9 +84,29 @@ INCLUDE_SOURCE incomplete.cc
 
 INVOKE_GCC incomplete.cc
 
-<h2>How do I get at some "private" field?</h2>
+<h2>Parameter type mismatches</h2>
 
-I often find myself trying to get at a field of a C++ object, knowing the fieldname, but finding it's private, and then trying to remember the name of the accessor - was it "get_foo", "getFoo", "read_foo", or just "foo"?
+I find a lot of my time is spent trying to call APIs, and dealing with silly mistakes like in the following:
+
+INCLUDE_SOURCE arg-type-mismatch.cc
+
+Older versions of GCC weren't very helpful when describing the problem: 
+
+INVOKE_OLD_GCC arg-type-mismatch.cc
+
+You were told the argument number, but then had to count commas in the source.
+
+For gcc 8, it prints this:
+
+INVOKE_GCC arg-type-mismatch.cc
+
+which I hope you agree is much more readable: the compiler underlines both the problematic argument at the callsite and the corresponding parameter at the declaration of the callee, so you can immediately see the mismatch.
+
+Implementing this turned out to be much harder than you might expect.  In particular, GCC's internal representation of expressions didn't make a distinction between the declaration of a parameter vs <i>uses</i> of that parameter, so there was no natural place to store the source location of the use of <code>second</code> in the example above.  So I had to do a fair amount of work "under the hood" to <a href="https://github.com/gcc-mirror/gcc/commit/d76863c8a62920c5a156125e68ad315b47bfcd24">make this happen</a>.
+
+<h2>How do I get at some <code>private</code> field?</h2>
+
+I often find myself trying to get at a field of a C++ object, knowing the fieldname, but finding it's private, and then trying to remember the name of the accessor - was it <code>get_foo</code>, <code>getFoo</code>, <code>read_foo</code>, or just <code>foo</code>?
 
 So for GCC 8 I've added hints to the "field is private" error, showing how to use an accessor to get at the field in question, if one exists:
 
@@ -100,40 +120,45 @@ INVOKE_GCC accessor.cc
 
 <h2>Template type differences</h2>
 
-FIXME:
-
-* C++ template type diff printing (commit 4d1eda3ac6f22a81b1df2015f95060777908b42c)
+Compiler errors involving C++ templates have a reputation for being difficult to read.  Here's what an older version of gcc emitted for a simple example:
 
 INVOKE_OLD_GCC templates.cc
 
+In even this simple case, I find there's something of a "wall of text" problem where my eyes start to glaze over.
+
+For gcc 8 I've borrowed some good ideas from clang to improve such template diagnostics.  I've added color to the messages, so that the mismatching parts of the template type are highlighted in green.  Also, we now elide the parameters that are common between two mismatching templates, printing <code>[...]</code> instead:
+
 INVOKE_GCC templates.cc
 
-INVOKE_GCC templates.cc -fdiagnostics-show-template-tree
+Those <code>[...]</code> elided parameters can be seen using <code>-fno-elide-type</code>:
 
-INVOKE_GCC templates.cc -fdiagnostics-show-template-tree -fno-elide-type
+INVOKE_GCC templates.cc -fno-elide-type
 
+For more complicated errors, I implemented <code>-fdiagnostics-show-template-tree</code>, which visualizes the mismatching templates in a hierarchical form (for this rather contrived example):
 
-<h2>Other stuff</h2>
+INVOKE_GCC templates-2.cc -fdiagnostics-show-template-tree
+
+which again works with <code>-fno-elide-type</code>:
+
+INVOKE_GCC templates-2.cc -fdiagnostics-show-template-tree -fno-elide-type
+
+<h2>Plus a bunch of other stuff...</h2>
 
 The C++ frontend can now give you a hint if you use a macro before it was defined
 (e.g. if you mess up the order of your #includes):
 
 INVOKE_GCC ordering.cc
 
-I added fix-it hints to the C++ frontend's -Wold-style-cast diagnostic, telling you whether you can use a static_cast, const_cast, reinterpret_cast etc:
+I added fix-it hints to the C++ frontend's -Wold-style-cast diagnostic, telling you whether you can use a <code>static_cast</code>, <code>const_cast</code>, <code>reinterpret_cast</code> etc:
 
 INVOKE_GCC -c old-style-cast-fixits.cc -Wold-style-cast
 
-Plus a bunch of other stuff.
+...and so on.
 
 <h2>Trying it out</h2>
 
-FIXME
+GCC 8 will be in Fedora 28, which should be out in a few months.  If you're feeling adventurous you can download the prerelease  <a href="https://getfedora.org/workstation/prerelease/">here</a>.
 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Alternatively, for simple code examples, you can play around with the new gcc at <a href="https://godbolt.org/">https://godbolt.org/</a> (select gcc "trunk").
 
-C and C++:
-
-* C/C++: underline parameters in mismatching function calls (commits b6fde48ec375b5e945b02bcec0ce58fc45980fba and 5d78d423a5f7a1d135c7bb678e82007678d1313c resp.)
-
-* see also "testsuite: add param-type-mismatch.c/C testcases as a baseline" (commit 2ac219a2ce6f7b3ecc984e10c5775ffbf4fce8e0)
+Have fun!
